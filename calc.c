@@ -80,6 +80,7 @@ fprintf( stderr,"Can't open output file\n") ;
    from the input file.
    link:https://chatgpt.com/share/6ade861c-e638-83eb-a33a-afd501f931d3 */
 char text[256] ;
+long long pos = 1;
  while(fgets(text,sizeof(text),input) !=NULL){
   /*https://beej.us/guide/bgc/html/split/strings.html?utm_source
 https://en.cppreference.com/c/string/byte/isdigit?utm_source

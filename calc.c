@@ -12,13 +12,118 @@ https://en.cppreference.com/c/string/byte/isspace?utm_source
 https://ruslanspivak.com/lsbasi-part5/?utm_source
 https://github.com/WarpRules/recursive_descent_parser_tutorial?utm_source
 https://en.cppreference.com/c/language/operator_arithmetic?utm_source
-https://craftinginterpreters.com/parsing-expressions.html?utm_source*/
+https://craftinginterpreters.com/parsing-expressions.html?utm_source
+https://www.youtube.com/watch?v=SToUyjAsaFk
+https://www.youtube.com/watch?v=NdW_ApiaivU
+https://www.youtube.com/watch?v=N55XNj8KjC4*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <errno.h>
 #include <ctype.h>
+
+void spaceIgnore(const char *text,int *e){
+   while(text[*e]==' '||text[*e] =='\t') {
+      (*e)++ ;
+    }
+}
+long long expressionCal(const char *text,int *e,int *err,long long *errPos,long long startPos);
+long long termCal(const char *text,int *e,int *err,long long *errPos,long long startPos);
+/* AI (ChatGPT): prompt "For the parentheses part from the task 
+I already have +, -, * and / i am working with precedence.
+ I am struggling with how to add parentheses,including nested parentheses 
+ and how to report missing or extra ). Can you explain the idea or give me 
+ a small example/hint,not the full solution?" and I asked for code example
+
+I used the explanation to understand that expression inside parentheses
+can parsed again until matching ')' is found.
+Link: <https://chatgpt.com/share/6adf7ec3-a708-83eb-b368-64933d3453b8> */
+
+long long valueCal(const char *text,int *e, int *err,long long *errPos,long long startPos  ){
+  spaceIgnore(text,e);
+    long long number= 0;
+     if(text[*e]==  '('){
+        (*e)++;
+   number =expressionCal(text,e,err,errPos,startPos);
+     if(*err!= 0){
+            return 0;
+          }
+ spaceIgnore (text,e);
+    if(text[*e]!=')') {
+       *errPos = startPos+(*e);
+         *err = 1;
+            return 0;
+          }
+          (*e)++;
+        }
+    else if(isdigit((unsigned char )text[*e])){
+   while(isdigit((unsigned char)text[*e])) {
+     number=number * 10+(text[*e] -'0');
+     (*e)++;
+      }
+    }else {
+      *errPos = startPos+(*e);
+   *err= 1;
+     return 0;
+    }
+    return number ;
+}
+long long termCal(const char *text,int *e,int *err,long long *errPos,long long startPos ){
+    long long value=valueCal (text,e,err,errPos,startPos);
+    if(*err != 0) {
+        return 0;
+  }
+   while(1) {
+    spaceIgnore(text, e );
+        if(text[*e]!= '*'&&text[*e]!='/') {
+            break;
+        }
+  char operation =text[*e] ;
+    (*e )++;
+     spaceIgnore (text,e);
+      long long rightPos = startPos +(*e);
+        long long next =valueCal(text,e,err,errPos,startPos);
+        if(*err!=0){
+      return 0; }
+   if (operation=='/' && next==0) {
+     *errPos = rightPos;
+        *err= 1;
+         return 0;
+          }
+   if(operation =='*') {
+     value*=next;
+        } else {
+     value /=next;
+        }
+    }
+    return value;
+}
+long long expressionCal(const char *text,int *e,int *err,long long *errPos,long long startPos ){
+      long long total=termCal(text,e,err,errPos,startPos);
+  if(*err != 0) {
+        return 0;
+  }
+   while(1) {
+    spaceIgnore(text, e );
+        if(text[*e]!= '+'&&text[*e]!='-') {
+            break;
+        }
+  char operation =text[*e] ;
+    (*e )++;
+     spaceIgnore (text,e);
+       long long next= termCal(text,e,err,errPos,startPos);
+        if(*err !=0){
+            return 0;
+        }
+   if(operation =='+') {
+     total +=next;
+        } else {
+     total -=next;
+        }
+    }
+    return total;
+}
 
 int main(int argc,char *argv[]){
     if (argc !=4){

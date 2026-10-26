@@ -201,26 +201,22 @@ these sources was used for lower part until fprintf(result, "%lld\n", total);*/
 int e = 0;
 int err= 0;
 long long errPos =0;
-long long number= 0;
-if(err==0){
-while (text[e]==' '||text[e]=='\t'){
-  e++;
-   }
- }
-if(text[e]=='\n' || text[e] =='\0'){
-   pos +=strlen(text);
+spaceIgnore(text,&e) ;
+if(text[e] == '\n' || text[e]=='\0') {
+    pos +=strlen(text);
     continue;
-  }
-if(!isdigit((unsigned char)text[e])){
-    errPos= startPos +e;
-    err =1;
- }
-if (err==0){
-while (isdigit((unsigned char)text[e]) ){
-   number =number*10+(text[e]-'0');
-    e++;
-  }
 }
+long long total=expressionCal(text,&e,&err,&errPos,startPos);
+if(err == 0) {
+    spaceIgnore(text,&e) ;
+    if(text[e]!='\n'&&text[e]!='\0') {
+  errPos=startPos+e;
+     err= 1 ;
+    }
+}
+#if 0 
+when I learned about #if 0 and #endif I thought I will never use it :/
+
 /* AI (ChatGPT): prompt "For the operator precedence part from the task,
 can you give me  good open resource where I can understand how 
 to handle * and / before + and - in a simple C parser? and 
@@ -299,6 +295,7 @@ if(err ==0){
         total -=term ;
     }
 }
+    #endif
  if(err !=0){
   fclose (result);
    result=fopen(output,"w") ;

@@ -82,51 +82,96 @@ fprintf( stderr,"Can't open output file\n") ;
 char text[256] ;
 long long pos = 1;
  while(fgets(text,sizeof(text),input) !=NULL){
+long long startPos = pos;
+
+
   /*https://beej.us/guide/bgc/html/split/strings.html?utm_source
 https://en.cppreference.com/c/string/byte/isdigit?utm_source
 https://en.cppreference.com/c/string/byte/isspace?utm_source
 these sources was used for lower part until fprintf(result, "%lld\n", total);*/
-int e=0;
-long long number=0;
-while (text[e]==' ' || text[e]== '\t'){
+int e = 0;
+int err= 0;
+long long errPos =0;
+long long number= 0;
+if(err==0){
+while (text[e]==' '||text[e]=='\t'){
   e++;
 }
+}
+if(text[e]=='\n' || text[e] =='\0'){
+   pos +=strlen(text);
+    continue;
+}
+if(!isdigit((unsigned char)text[e])){
+    errPos= startPos +e;
+    err =1;
+}
+if (err==0){
 while (isdigit((unsigned char)text[e]) ){
-   number = number*10+(text[e]-'0');
+   number =number*10+(text[e]-'0');
     e++;
 }
+}
 long long total=number;
+if (err==0){
 while(text[e] !='\0' && text[e] !='\n'){
-    while(text[e]==' ' || text[e]=='\t'){
+    while(text[e]==' '|| text[e]=='\t'){
         e++;
    }
- if(text[e] == '\0' || text[e] == '\n') {
+ if(text[e]== '\0'||text[e] =='\n') {
     break ;
   }
-  char operation=text[e] ;
-    e++;
-  while(text[e] ==' ' || text[e]=='\t'){
+  if(text[e] !='+' && text[e] != '-'){
+   errPos=startPos+e;
+    err = 1;
+    break ;
+}
+char operation=text[e] ;
+   e++;
+  while(text[e] ==' '|| text[e]=='\t'){
       e++;
     }
+ if (text[e] == '\n' ||text[e]=='\0') {
+  errPos = startPos+e;
+    err=1 ;
+     break ;
+}
+if(!isdigit((unsigned char)text[e])){
+    errPos= startPos + e;
+    err=1 ; 
+    break;
+}
 
     /*AI (ChatGPT): prompt:i did until there but i am struggling 
     with part after can u help me a little bit.I used ChatGPT's example to understand how to read the next number
    and update the total for + and - operations
    link:https://chatgpt.com/share/6ade861c-e638-83eb-a33a-afd501f931d3*/
-   long long next_number =0;
+   long long nextNumber =0;
     while(isdigit((unsigned char)text[e])) {
-      next_number = next_number * 10 + (text[e] - '0');
+      nextNumber= nextNumber*10+(text[e]-'0');
         e++;
   }
-    if (operation =='+'){
-      total += next_number;
-    } else if (operation=='-'){
-       total -=next_number;
+    if (operation=='+') {
+      total +=nextNumber;
+    } else if(operation=='-'){
+       total -=nextNumber;
     }
 }
-fprintf(result, "%lld\n", total);
 }
-  fclose (input);
+ if(err !=0){
   fclose (result);
-    return 0;
+   result=fopen(output,"w") ;
+     if(result ==NULL){
+  fprintf(stderr,"Can't open output file\n");
+      fclose( input );
+       return 1; }
+   fprintf(result,"ERROR:%lld\n",errPos);
+      break;
+ }
+ fprintf(result, "%lld\n",total);
+    pos += strlen(text);
+}
+fclose (input);
+fclose (result);
+return 0;
 }

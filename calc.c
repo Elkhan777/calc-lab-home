@@ -15,7 +15,12 @@ https://en.cppreference.com/c/language/operator_arithmetic?utm_source
 https://craftinginterpreters.com/parsing-expressions.html?utm_source
 https://www.youtube.com/watch?v=SToUyjAsaFk
 https://www.youtube.com/watch?v=NdW_ApiaivU
-https://www.youtube.com/watch?v=N55XNj8KjC4*/
+https://www.youtube.com/watch?v=N55XNj8KjC4
+https://www.youtube.com/watch?v=rAZpPN1Q4so
+https://stackoverflow.com/questions/30991941/how-to-ignore-unneccessary-comment-line-from-the-input-file-in-c?utm_source
+https://introcs-python.cs.luc.edu/recursion/recursiondparser.html?utm_source
+https://eli.thegreenplace.net/2009/03/14/some-problems-of-recursive-descent-parsers?utm_source
+https://www.cs.fsu.edu/~lacher/courses/COP4020/fall15/assigns/proj2b.html?utm_source*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,6 +35,46 @@ void spaceIgnore(const char *text,int *e){
 }
 long long expressionCal(const char *text,int *e,int *err,long long *errPos,long long startPos);
 long long termCal(const char *text,int *e,int *err,long long *errPos,long long startPos);
+long long valueCal(const char *text,int *e,int *err,long long *errPos,long long startPos);
+
+
+/* AI (ChatGPT): prompt "listen For the ** part from the task I did parentheses
+and +, -, *, / with precedence working as u know. Now i have problem 
+with how to make ** right-associative so 2 ** 3 ** 2 becomes 512 and how
+to report a negative integer exponent at the start of the exponent.
+Can you explain the idea or give me a small example or hint or useful 
+information website or vidieo which u didnt gave.
+Can you explain the idea or give me a small example or hint, not the full solution?"
+From exp I understand that  power should call itself for the
+exponent so 2 ** 3 ** 2 is calculated as 2 ** (3 ** 2).
+Link: <https://chatgpt.com/share/6adfc1e8-682c-83ed-9f74-6c9eaca39642> */
+long long powerCal(const char *text,int *e,int *err,long long *errPos,long long startPos){
+  long long base=valueCal(text,e,err,errPos,startPos);
+    if (*err!= 0) {
+        return 0 ;
+    }
+spaceIgnore ( text,e);
+   if(text[*e]== '*' && text[*e+1] =='*') {
+       (*e) +=2;
+        spaceIgnore(text,e);
+long long exponentPos = startPos +(*e) ;
+   long long exponent = powerCal (text,e,err,errPos,startPos);
+       if (*err!= 0) {
+            return 0 ;
+  }
+    if (exponent <0) {
+     *errPos = exponentPos ;
+        *err = 1;
+           return 0;
+   }
+long long result = 1;
+  for(long long i = 0; i < exponent; i++) {
+       result*= base ;
+   }
+   return result;
+    }
+    return base;
+}
 /* AI (ChatGPT): prompt "For the parentheses part from the task 
 I already have +, -, * and / i am working with precedence.
  I am struggling with how to add parentheses,including nested parentheses 
@@ -70,7 +115,7 @@ long long valueCal(const char *text,int *e, int *err,long long *errPos,long long
     return number ;
 }
 long long termCal(const char *text,int *e,int *err,long long *errPos,long long startPos ){
-    long long value=valueCal (text,e,err,errPos,startPos);
+   long long value = powerCal (text,e,err,errPos,startPos);
     if(*err != 0) {
         return 0;
   }
@@ -83,7 +128,7 @@ long long termCal(const char *text,int *e,int *err,long long *errPos,long long s
     (*e )++;
      spaceIgnore (text,e);
       long long rightPos = startPos +(*e);
-        long long next =valueCal(text,e,err,errPos,startPos);
+        long long next =powerCal(text,e,err,errPos,startPos);
         if(*err!=0){
       return 0; }
    if (operation=='/' && next==0) {
@@ -202,6 +247,11 @@ int e = 0;
 int err= 0;
 long long errPos =0;
 spaceIgnore(text,&e) ;
+if(text[e]=='#'){
+    pos += strlen(text);
+    continue;
+}
+
 if(text[e] == '\n' || text[e]=='\0') {
     pos +=strlen(text);
     continue;

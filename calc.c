@@ -8,7 +8,11 @@ https://www.cppreference.com/index.php?title=c/io/fprintf&utm_source
 https://www.cppreference.com/c/string/byte/strrchr?utm_source
 https://beej.us/guide/bgc/html/split/strings.html?utm_source
 https://en.cppreference.com/c/string/byte/isdigit?utm_source
-https://en.cppreference.com/c/string/byte/isspace?utm_source*/
+https://en.cppreference.com/c/string/byte/isspace?utm_source
+https://ruslanspivak.com/lsbasi-part5/?utm_source
+https://github.com/WarpRules/recursive_descent_parser_tutorial?utm_source
+https://en.cppreference.com/c/language/operator_arithmetic?utm_source
+https://craftinginterpreters.com/parsing-expressions.html?utm_source*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -96,23 +100,32 @@ long long number= 0;
 if(err==0){
 while (text[e]==' '||text[e]=='\t'){
   e++;
-}
-}
+   }
+ }
 if(text[e]=='\n' || text[e] =='\0'){
    pos +=strlen(text);
     continue;
-}
+  }
 if(!isdigit((unsigned char)text[e])){
     errPos= startPos +e;
     err =1;
-}
+ }
 if (err==0){
 while (isdigit((unsigned char)text[e]) ){
    number =number*10+(text[e]-'0');
     e++;
+  }
 }
-}
-long long total=number;
+/* AI (ChatGPT): prompt "For the operator precedence part from the task,
+can you give me  good open resource where I can understand how 
+to handle * and / before + and - in a simple C parser? and 
+can u explain that part  and with examples not the full code."
+  I used the hint from AI to understand using separate term for * and / so they
+   are calculated before adding or subtracting from the total
+   Link: https://chatgpt.com/share/6adf6d47-b224-83eb-9c6a-ad4ce79860c0 */
+long long total=0;
+long long term=number;
+char sign ='+';
 if (err==0){
 while(text[e] !='\0' && text[e] !='\n'){
     while(text[e]==' '|| text[e]=='\t'){
@@ -121,7 +134,7 @@ while(text[e] !='\0' && text[e] !='\n'){
  if(text[e]== '\0'||text[e] =='\n') {
     break ;
   }
-  if(text[e] !='+' && text[e] != '-'){
+  if(text[e] !='+' && text[e] !='-' && text[e] !='*' && text[e]!= '/') {
    errPos=startPos+e;
     err = 1;
     break ;
@@ -146,17 +159,40 @@ if(!isdigit((unsigned char)text[e])){
     with part after can u help me a little bit.I used ChatGPT's example to understand how to read the next number
    and update the total for + and - operations
    link:https://chatgpt.com/share/6ade861c-e638-83eb-a33a-afd501f931d3*/
+   // I saved the start position of the right operand so division by zero
+   // and it reports the correct error position
+   long long nextPos=startPos+e;
    long long nextNumber =0;
     while(isdigit((unsigned char)text[e])) {
       nextNumber= nextNumber*10+(text[e]-'0');
         e++;
   }
-    if (operation=='+') {
-      total +=nextNumber;
-    } else if(operation=='-'){
-       total -=nextNumber;
-    }
+if(operation=='/' &&nextNumber== 0){
+ errPos=nextPos;
+  err =1;
+    break;
 }
+ if(operation=='*') {
+    term *=nextNumber;
+}else if(operation=='/' ){
+    term /=nextNumber;
+} else{
+  if (sign=='+' ) {
+     total += term;
+ } else if(sign=='-') {
+        total -=term;
+    }
+    sign=operation;
+    term =nextNumber ;
+    }
+  }
+}
+if(err ==0){
+ if(sign=='+') {
+    total +=term ;
+}else if(sign =='-'){
+        total -=term ;
+    }
 }
  if(err !=0){
   fclose (result);
@@ -172,6 +208,6 @@ if(!isdigit((unsigned char)text[e])){
     pos += strlen(text);
 }
 fclose (input);
-fclose (result);
-return 0;
+  fclose (result);
+    return 0;
 }

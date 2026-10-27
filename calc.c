@@ -24,10 +24,15 @@ https://eli.thegreenplace.net/2009/03/14/some-problems-of-recursive-descent-pars
 https://www.cs.fsu.edu/~lacher/courses/COP4020/fall15/assigns/proj2b.html?utm_source
 https://man7.org/linux/man-pages/man3/readdir.3.html?utm_source
 https://www.youtube.com/watch?v=MMuWh_It3ZU
-https://www.youtube.com/watch?v=j9yL30R6npk*/
+https://www.youtube.com/watch?v=j9yL30R6npk
+https://www.geeksforgeeks.org/c/how-to-use-typedef-for-struct-in-c/
+https://www.learn-c.org/en/Dynamic_allocation?utm_source
+https://en.cppreference.com/c/memory/realloc?utm_source
+https://beej.us/guide/bgc/html/split/manual-memory-allocation.html?utm_source*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include <sys/stat.h>
 #include <errno.h>
 #include <ctype.h>
@@ -45,9 +50,63 @@ void spaceIgnore(const char *text,int *e){
       (*e)++ ;
     }
 }
-long long expressionCal(const char *text,int *e,int *err,long long *errPos,long long startPos);
-long long termCal(const char *text,int *e,int *err,long long *errPos,long long startPos);
-long long valueCal(const char *text,int *e,int *err,long long *errPos,long long startPos);
+typedef struct {
+    int isFloat;
+    long long intValue;
+    double floatValue;
+} Value;
+Value intMaker (long long number) {
+   Value val ;
+    val.isFloat = 0;
+     val.intValue = number;
+      val.floatValue = (double)number;
+    return val;
+}
+Value floatMaker(double number){
+    Value val ;
+     val.isFloat = 1;
+      val.intValue = 0;
+       val.floatValue = number;
+    return val;
+}
+double doubleMaker (Value val) {
+    if(val.isFloat){
+        return val.floatValue;
+    }
+    return(double)val.intValue;
+}
+Value numberMaker(const char *text,int *e,int *err,long long *errPos,long long startPos) {
+    long long whole = 0;
+    if (!isdigit ((unsigned char)text[*e])) {
+        *errPos = startPos + (*e) ;
+        *err= 1;
+        return intMaker(0) ;
+    }
+    while (isdigit ((unsigned char)text[*e])) {
+        whole = whole*10+(text[*e]-'0');
+        (*e)++;
+    }
+    if (text[*e]== '.') {
+        (*e)++;
+      if (!isdigit ((unsigned char)text[*e])) {
+         *errPos = startPos+(*e)-1 ;
+           *err=1;
+             return intMaker(0);
+        }
+        double number = (double)whole;
+         double place= 0.1;
+        while (isdigit ((unsigned char)text[*e])) {
+          number+= (text[*e]-'0')*place;
+            place*= 0.1;
+             (*e)++;
+        }
+        return floatMaker(number);
+    }
+    return intMaker(whole);
+}
+Value expressionCal(const char *text,int *e,int *err,long long *errPos,long long startPos);
+Value termCal(const char *text,int *e,int *err,long long *errPos,long long startPos);
+Value valueCal(const char *text,int *e,int *err,long long *errPos,long long startPos);
 
 
 /* AI (ChatGPT): prompt "listen For the ** part from the task I did parentheses
@@ -60,126 +119,198 @@ Can you explain the idea or give me a small example or hint, not the full soluti
 From exp I understand that  power should call itself for the
 exponent so 2 ** 3 ** 2 is calculated as 2 ** (3 ** 2).
 Link: <https://chatgpt.com/share/6adfc1e8-682c-83ed-9f74-6c9eaca39642> */
-long long powerCal(const char *text,int *e,int *err,long long *errPos,long long startPos){
-  long long base=valueCal(text,e,err,errPos,startPos);
+Value powerCal(const char *text,int *e,int *err,long long *errPos,long long startPos){
+ Value base=valueCal(text,e,err,errPos,startPos);
     if (*err!= 0) {
-        return 0 ;
+        return intMaker(0) ;
     }
 spaceIgnore ( text,e);
    if(text[*e]== '*' && text[*e+1] =='*') {
+      long long operatorPos=startPos+(*e);
        (*e) +=2;
         spaceIgnore(text,e);
 long long exponentPos = startPos +(*e) ;
-   long long exponent = powerCal (text,e,err,errPos,startPos);
+   Value exponent = powerCal (text,e,err,errPos,startPos);
        if (*err!= 0) {
-            return 0 ;
+            return intMaker(0) ;
   }
-    if (exponent <0) {
+  if (!base.isFloat&&!exponent.isFloat) {
+    if (exponent.intValue<0) {
      *errPos = exponentPos ;
         *err = 1;
-           return 0;
+            return intMaker(0) ;
    }
-long long result = 1;
-  for(long long i = 0; i < exponent; i++) {
-       result*= base ;
-   }
-   return result;
+   long long result=1;
+   for(long long i=0; i<exponent.intValue; i++) {
+      result*= base.intValue ;
     }
-    return base;
+    return intMaker(result) ;
+  }
+  double result = pow(doubleMaker(base), doubleMaker(exponent));
+  if (!isfinite(result)) {
+    *errPos = operatorPos;
+    *err = 1;
+    return intMaker(0) ;
+  }
+  return floatMaker(result) ;
+}
+ return base;
 }
 /* AI (ChatGPT): prompt "For the parentheses part from the task 
 I already have +, -, * and / i am working with precedence.
  I am struggling with how to add parentheses,including nested parentheses 
  and how to report missing or extra ). Can you explain the idea or give me 
- a small example/hint,not the full solution?" and I asked for code example
+ a small example/hint not the full solution?" and I asked for code example
 
 I used the explanation to understand that expression inside parentheses
 can parsed again until matching ')' is found.
 Link: <https://chatgpt.com/share/6adf7ec3-a708-83eb-b368-64933d3453b8> */
 
-long long valueCal(const char *text,int *e, int *err,long long *errPos,long long startPos  ){
+Value valueCal(const char *text,int *e,int *err,long long *errPos,long long startPos){
   spaceIgnore(text,e);
-    long long number= 0;
      if(text[*e]==  '('){
         (*e)++;
-   number =expressionCal(text,e,err,errPos,startPos);
+   Value inside =expressionCal(text,e,err,errPos,startPos);
      if(*err!= 0){
-            return 0;
+            return intMaker(0);
           }
  spaceIgnore (text,e);
     if(text[*e]!=')') {
        *errPos = startPos+(*e);
          *err = 1;
-            return 0;
+            return intMaker(0);
           }
           (*e)++;
+         return inside;
         }
-    else if(isdigit((unsigned char )text[*e])){
-   while(isdigit((unsigned char)text[*e])) {
-     number=number * 10+(text[*e] -'0');
-     (*e)++;
-      }
-    }else {
-      *errPos = startPos+(*e);
-   *err= 1;
-     return 0;
-    }
-    return number ;
+  if(isdigit((unsigned char )text[*e])){
+    return numberMaker(text,e,err,errPos,startPos);
+  }
+    *errPos = startPos+(*e);
+    *err = 1;
+    return intMaker(0);
 }
-long long termCal(const char *text,int *e,int *err,long long *errPos,long long startPos ){
-   long long value = powerCal (text,e,err,errPos,startPos);
+ Value termCal(const char *text,int *e,int *err,long long *errPos,long long startPos ){
+   Value value = powerCal (text,e,err,errPos,startPos);
     if(*err != 0) {
-        return 0;
+        return intMaker(0) ;
   }
    while(1) {
     spaceIgnore(text, e );
         if(text[*e]!= '*'&&text[*e]!='/') {
             break;
         }
+  long long operationPos = startPos +(*e);
   char operation =text[*e] ;
     (*e )++;
      spaceIgnore (text,e);
       long long rightPos = startPos +(*e);
-        long long next =powerCal(text,e,err,errPos,startPos);
+        Value next =powerCal(text,e,err,errPos,startPos);
         if(*err!=0){
-      return 0; }
-   if (operation=='/' && next==0) {
+       return intMaker(0) ; }
+   if (operation=='/' &&  doubleMaker(next)==0.0) {
      *errPos = rightPos;
         *err= 1;
-         return 0;
+         return intMaker(0) ;
           }
+   if(!value.isFloat && !next.isFloat){
    if(operation =='*') {
-     value*=next;
-        } else {
-     value /=next;
-        }
+      value = intMaker (value.intValue*next.intValue);
+    }else{
+      value = intMaker (value.intValue/next.intValue);
     }
-    return value;
+  } else {
+    double result;
+    if(operation=='*'){
+      result=doubleMaker(value)*doubleMaker(next);
+    }else{
+      result=doubleMaker(value)/doubleMaker(next);
+    }
+    if (!isfinite(result)) {
+      *errPos = operationPos;
+      *err = 1;
+      return intMaker(0) ;
+    }
+    value=floatMaker(result) ;
+  }
 }
-long long expressionCal(const char *text,int *e,int *err,long long *errPos,long long startPos ){
-      long long total=termCal(text,e,err,errPos,startPos);
+return value;
+}
+Value expressionCal(const char *text,int *e,int *err,long long *errPos,long long startPos ){
+      Value total=termCal(text,e,err,errPos,startPos);
   if(*err != 0) {
-        return 0;
+        return intMaker(0) ;
   }
    while(1) {
     spaceIgnore(text, e );
         if(text[*e]!= '+'&&text[*e]!='-') {
             break;
         }
+  long long operationPos=startPos+(*e);
   char operation =text[*e] ;
     (*e )++;
      spaceIgnore (text,e);
-       long long next= termCal(text,e,err,errPos,startPos);
+       Value next= termCal(text,e,err,errPos,startPos);
         if(*err !=0){
-            return 0;
+            return intMaker(0) ;
         }
-   if(operation =='+') {
-     total +=next;
-        } else {
-     total -=next;
+  if(!total.isFloat && !next.isFloat){
+    if(operation =='+') {
+       total = intMaker (total.intValue+next.intValue);
+      } else {
+        total = intMaker (total.intValue-next.intValue);
+      }
+    }else{
+      double result;
+      if(operation=='+'){
+        result = doubleMaker (total) + doubleMaker(next);
+            }else{
+              result = doubleMaker (total) -doubleMaker(next);
+            }
+      if(!isfinite(result)){
+       *errPos=operationPos;
+         *err=1;
+          return intMaker(0) ;
+        }
+        total= floatMaker(result) ;
         }
     }
+
     return total;
+}
+/* AI (ChatGPT): prompt "i did grade 10 but large part remains what i need to do for that part"
+Link: <https://chatgpt.com/share/6ae114fc-b390-83ed-99b3-6d590f0f0c12> */
+char *readLongLine(FILE *input,size_t *length);
+char *readLongLine(FILE *input,size_t *length){
+  size_t size = 256;
+  size_t used = 0;
+  char *text = malloc(size);
+    if (text== NULL) {
+        return NULL;
+    }
+    int character;
+    while((character=fgetc(input))!=EOF){
+        if(used+1>= size){
+            size*= 2;
+            char *newText = realloc(text,size);
+            if(newText== NULL){
+              free (text);
+              return NULL;
+            }
+            text = newText;
+          }
+          text[used++]= (char)character;
+          if(character == '\n'){
+            break;
+        }
+    }
+    if(used == 0&&character == EOF){
+     free (text);
+       return NULL;
+    }
+    text[used]= '\0';
+    *length= used;
+    return text;
 }
 int fileProces(const char *input_file,const char *output_dir);
 int main(int argc,char *argv[]){
@@ -337,9 +468,10 @@ fprintf( stderr,"Can't open output file\n") ;
    I used the hint and the resource to understand how to read each expression
    from the input file.
    link:https://chatgpt.com/share/6ade861c-e638-83eb-a33a-afd501f931d3 */
-char text[256] ;
-long long pos = 1;
- while(fgets(text,sizeof(text),input) !=NULL){
+long long pos=1;
+size_t textLength;
+char *text;
+while((text=readLongLine(input,&textLength)) !=NULL){
 long long startPos = pos;
 
 
@@ -352,15 +484,17 @@ int err= 0;
 long long errPos =0;
 spaceIgnore(text,&e) ;
 if(text[e]=='#'){
-    pos += strlen(text);
+    pos +=(long long)textLength;
+    free(text);
     continue;
 }
 
 if(text[e] == '\n' || text[e]=='\0') {
-    pos +=strlen(text);
+    pos +=(long long)textLength;
+    free(text);
     continue;
 }
-long long total=expressionCal(text,&e,&err,&errPos,startPos);
+Value total=expressionCal(text,&e,&err,&errPos,startPos);
 if(err == 0) {
     spaceIgnore(text,&e) ;
     if(text[e]!='\n'&&text[e]!='\0') {
@@ -456,12 +590,19 @@ if(err ==0){
      if(result ==NULL){
   fprintf(stderr,"Can't open output file\n");
       fclose( input );
+      free(text);
        return 1; }
    fprintf(result,"ERROR:%lld\n",errPos);
+   free(text);
       break;
  }
- fprintf(result, "%lld\n",total);
-    pos += strlen(text);
+ if (total.isFloat) {
+    fprintf (result, "%.15g\n", total.floatValue);
+} else {
+    fprintf (result, "%lld\n", total.intValue);
+}
+pos +=(long long)textLength;
+free(text);
 }
 fclose (input);
   fclose (result);

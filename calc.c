@@ -1,7 +1,8 @@
 //Elkhan Ibrahimov: 251ADB061
 //
 // Compile with: gcc -O2 -Wall -Wextra -std=c17 -o calc calc.c -lm
-/*Resources used: ChatGPT for explanations
+/*Resources used: ChatGPT for explanations and hints 
+link <>
 https://man7.org/linux/man-pages/man2/mkdir.2.html?utm_source
 https://man7.org/linux/man-pages/man3/dirname.3.html?utm_source
 https://www.cppreference.com/index.php?title=c/io/fprintf&utm_source
@@ -20,14 +21,25 @@ https://www.youtube.com/watch?v=rAZpPN1Q4so
 https://stackoverflow.com/questions/30991941/how-to-ignore-unneccessary-comment-line-from-the-input-file-in-c?utm_source
 https://introcs-python.cs.luc.edu/recursion/recursiondparser.html?utm_source
 https://eli.thegreenplace.net/2009/03/14/some-problems-of-recursive-descent-parsers?utm_source
-https://www.cs.fsu.edu/~lacher/courses/COP4020/fall15/assigns/proj2b.html?utm_source*/
+https://www.cs.fsu.edu/~lacher/courses/COP4020/fall15/assigns/proj2b.html?utm_source
+https://man7.org/linux/man-pages/man3/readdir.3.html?utm_source
+https://www.youtube.com/watch?v=MMuWh_It3ZU
+https://www.youtube.com/watch?v=j9yL30R6npk*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <errno.h>
 #include <ctype.h>
+#include <dirent.h>
 
+int fileChecker(const char *name) {
+  int len =strlen(name);
+    if(len< 4) {
+      return 0; //
+    }
+    return strcmp(name+len- 4, ".txt")== 0;
+}
 void spaceIgnore(const char *text,int *e){
    while(text[*e]==' '||text[*e] =='\t') {
       (*e)++ ;
@@ -169,13 +181,14 @@ long long expressionCal(const char *text,int *e,int *err,long long *errPos,long 
     }
     return total;
 }
-
+int fileProces(const char *input_file,const char *output_dir);
 int main(int argc,char *argv[]){
+  #if 0
     if (argc !=4){
      fprintf(stderr,"Invalid arguments\n" );
      return 1 ;
     }
-    if(strcmp(argv[1],"-o") !=0){
+    if(strcmp(argv[1],"-o")!=0&&strcmp(argv[1], "--output-dir" ) !=0){
      fprintf(stderr,"Invalid option\n") ;
      return 1;
     }
@@ -184,11 +197,104 @@ int main(int argc,char *argv[]){
  and argv[3] the input file. Am I doing it correctly and what should I do next?"
  I used the guidance to get the output directory and input filename from argv
  link:https://chatgpt.com/share/6ade861c-e638-83eb-a33a-afd501f931d3*/
+
  const char *output_dir=argv[2];//For that part
   const char *input_file= argv [3];
-   FILE *input=fopen(input_file,"r");// and for that one
+   #endif
+ if(argc !=2&& argc !=3 && argc !=4 && argc !=5) {
+  fprintf(stderr,"Invalid argument\n");
+    return 1;
+}
+if ((argc == 3||argc == 5) &&strcmp(argv[1],"-d")!=0 &&strcmp(argv[1],"--dir")!=0) {
+ fprintf(stderr,"Invalid option\n");
+    return 1;
+}
+const char *output_dir;
+ const char *input_file = NULL;
+   char default_dir[512];
+  int  dirChecker = 0;
+const char *input_dir= NULL;
+
+if ((argc == 3 || argc== 5)&&(strcmp(argv[1], "-d")== 0||strcmp (argv[1],"--dir") ==0 )){
+    dirChecker = 1; 
+    input_dir = argv[2] ;
+}
+if(dirChecker == 1) {
+  if(argc == 5) {
+     if(strcmp(argv[3],"-o")!=0 &&strcmp (argv[3],"--output-dir") !=0) {
+         fprintf (stderr,"Invalid option\n");
+          return 1;
+        }
+     output_dir = argv[4];
+    }else{
+   const char *base= strrchr(input_dir,'/');
+    if(base == NULL) {
+      base = input_dir;
+    } else{
+      base++;
+    }
+     snprintf(default_dir,sizeof(default_dir),"%s_elkhan_251adb061",base);
+        output_dir=default_dir;
+    }
+}
+else if (argc==4) {
+    if(strcmp(argv[1],"-o")!=0 &&strcmp(argv[1],"--output-dir") !=0) {
+      fprintf(stderr,"Invalid option\n");
+        return 1;
+    }
+    output_dir = argv[2];
+    input_file = argv[3];
+}else{
+  input_file = argv[1];
+    const char *base = strrchr (input_file,'/');
+    if (base==NULL) {
+        base=input_file;
+    }else{
+        base++;
+    }
+    char baseName[256];
+     snprintf (baseName, sizeof(baseName), "%s" ,base);
+    char *dot =strrchr(baseName,'.') ;
+    if (dot!= NULL) {
+        *dot='\0';
+    }
+  snprintf (default_dir, sizeof(default_dir), "%s_elkhan_251adb061", baseName);
+    output_dir = default_dir;
+}
+if(dirChecker==0){
+ return fileProces(input_file,output_dir);
+}
+DIR *folder = opendir (input_dir);
+if (folder==NULL){
+  fprintf(stderr,"Can't open input dir\n");
+    return 1;
+}
+struct dirent *entry;
+ while ((entry=readdir(folder))!= NULL) {
+if (fileChecker(entry->d_name) == 0) {
+        continue;
+    }
+  char inputPath[1024];
+   snprintf(inputPath,sizeof(inputPath),"%s/%s",input_dir,entry->d_name);
+    struct stat fileInfo ;
+     if (stat (inputPath, &fileInfo)!= 0) {
+        continue;
+    }
+    if(!S_ISREG (fileInfo.st_mode)) {
+        continue;
+    }
+   if(fileProces (inputPath,output_dir)!= 0) {
+    closedir (folder) ;
+      return 1;
+    }
+}
+   closedir (folder) ;
+    return 0;
+}
+int fileProces(const char*input_file,const char *output_dir){
+  FILE *input=fopen(input_file,"r");// and for that one
     if(input== NULL){
-     fprintf(stderr,"Cannot open input file\n");
+     fprintf(stderr,"Can't open input file\n");
        return 1;
     }
 
@@ -218,10 +324,8 @@ char *extension =strrchr(name,'.') ;
 if(extension !=NULL){
     *extension= '\0' ;
 }
-char output[512] ;
-snprintf(output,sizeof(output),
-  "%s/%s_elkhan_ibrahimov_251adb061.txt",
-      output_dir, name);
+char output[1024] ;
+snprintf(output,sizeof(output),"%s/%s_elkhan_ibrahimov_251adb061.txt",output_dir, name);
 FILE *result =fopen(output,"w");
 if(result == NULL){
 fprintf( stderr,"Can't open output file\n") ;

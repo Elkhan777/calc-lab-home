@@ -2,7 +2,7 @@
 //
 // Compile with: gcc -O2 -Wall -Wextra -std=c17 -o calc calc.c -lm
 /*Resources used: ChatGPT for explanations and hints 
-link <>
+shared link <https://chatgpt.com/share/6ae12144-4a70-83eb-abad-d10298c4b653>
 https://man7.org/linux/man-pages/man2/mkdir.2.html?utm_source
 https://man7.org/linux/man-pages/man3/dirname.3.html?utm_source
 https://www.cppreference.com/index.php?title=c/io/fprintf&utm_source

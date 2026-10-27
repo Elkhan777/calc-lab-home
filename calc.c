@@ -111,8 +111,7 @@ Value valueCal(const char *text,int *e,int *err,long long *errPos,long long star
 
 /* AI (ChatGPT): prompt "listen For the ** part from the task I did parentheses
 and +, -, *, / with precedence working as u know. Now i have problem 
-with how to make ** right-associative so 2 ** 3 ** 2 becomes 512 and how
-to report a negative integer exponent at the start of the exponent.
+with how to make ** right-associative so 2 ** 3 ** 2if(text[*e]!=')'){ the exponent.
 Can you explain the idea or give me a small example or hint or useful 
 information website or vidieo which u didnt gave.
 Can you explain the idea or give me a small example or hint, not the full solution?"
@@ -129,7 +128,11 @@ spaceIgnore ( text,e);
       long long operatorPos=startPos+(*e);
        (*e) +=2;
         spaceIgnore(text,e);
+/* like long long rightPos=startPos+(*e) 
+there I also save the start of the exponent because a negative integer exponent is reported there.*/
 long long exponentPos = startPos +(*e) ;
+
+// powerCal calls itself for the exponent so for instance 2 ** 3 ** 2 becomes 2 ** (3 ** 2)
    Value exponent = powerCal (text,e,err,errPos,startPos);
        if (*err!= 0) {
             return intMaker(0) ;
@@ -204,6 +207,7 @@ Value valueCal(const char *text,int *e,int *err,long long *errPos,long long star
   char operation =text[*e] ;
     (*e )++;
      spaceIgnore (text,e);
+     // I save the start of the right operand because division by zero must be reported there
       long long rightPos = startPos +(*e);
         Value next =powerCal(text,e,err,errPos,startPos);
         if(*err!=0){
@@ -468,6 +472,8 @@ fprintf( stderr,"Can't open output file\n") ;
    I used the hint and the resource to understand how to read each expression
    from the input file.
    link:https://chatgpt.com/share/6ade861c-e638-83eb-a33a-afd501f931d3 */
+   /*pos stores the start position of each line in the whole file and 
+   e stores the position inside the current line so startPos+e gives the exact error position.*/ 
 long long pos=1;
 size_t textLength;
 char *text;
